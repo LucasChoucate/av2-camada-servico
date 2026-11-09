@@ -76,8 +76,8 @@ Testes: `pip install pytest httpx && pytest`
 >   *Starter* e descomente o bloco `disk` no `render.yaml` (montado em `/data`).
 > - O serviço **"dorme" após 15 min sem requisições** e leva cerca de 1 minuto para acordar. Com o ESP32
 >   enviando dados continuamente, ele fica acordado.
-> - O Render só aceita **HTTPS** (requisições HTTP são redirecionadas). No ESP32, use `WiFiClientSecure`
->   (exemplo abaixo).
+> - O Render só aceita **HTTPS** (requisições HTTP são redirecionadas). O `BACKEND_URL` do firmware precisa
+>   começar com `https://` (veja [Compatibilidade com o firmware](#compatibilidade-com-o-firmware-de-monitoramento)).
 
 ### Variáveis de ambiente
 
@@ -103,12 +103,11 @@ cada 10 s) economiza handshakes TLS no ESP32.
 ```json
 {
   "nivel_tinta": 75,
-  "temperatura": 24.1,
-  "umidade": 55,
+  "temperatura": 24.10,
+  "umidade": 55.00,
   "luminosidade": 680,
-  "presenca": 1,
   "timestamp": "2025-09-02T14:35:00Z",
-  "device_id": "chao-fabrica-01"
+  "uptime_emissor_ms": 123456
 }
 ```
 
@@ -118,7 +117,7 @@ cada 10 s) economiza handshakes TLS no ESP32.
 | `temperatura` | número/null | -40–85 °C (`null` se o DHT falhar) |
 | `umidade` | número/null | 0–100 % (`null` se o DHT falhar) |
 | `luminosidade` | inteiro | 0–4095 (ADC) **obrigatório** |
-| `presenca` | 0/1/null | opcional (o hardware atual não tem PIR) |
+| `presenca` | 0/1/null | opcional. O PIR foi dispensado pelo professor, então o firmware não envia |
 | `timestamp` | ISO 8601 | opcional. Se ausente ou com relógio não sincronizado (antes de 2020), usa a hora do servidor |
 | `device_id` | texto | opcional, padrão `chao-fabrica-01` |
 | `uptime_emissor_ms` | inteiro | opcional, `millis()` do ESP32 chão de fábrica |
@@ -130,7 +129,7 @@ Respostas: `201 {"recebidas":1,"gravadas":1,"alerta":false}`, `422` (JSON ou cam
 ```bash
 curl -X POST https://SEU-APP.onrender.com/api/leituras \
   -H "Content-Type: application/json" \
-  -d '{"nivel_tinta":75,"temperatura":24,"umidade":55,"luminosidade":680,"presenca":1}'
+  -d '{"nivel_tinta":75,"temperatura":24.1,"umidade":55,"luminosidade":680,"timestamp":null,"uptime_emissor_ms":123456}'
 ```
 
 ### Compatibilidade com o firmware de monitoramento
@@ -149,38 +148,8 @@ sem `presenca`, com `timestamp` `null` quando o NTP não sincronizou). Só é pr
 > passar de 1,5 s, que é o `HTTP_TIMEOUT_MS` atual do firmware. Se o Serial mostrar
 > `Backend: falha de conexão (read Timeout)`, aumente esse valor (por exemplo, para 5000).
 
-### Exemplo genérico de envio com HTTPS (Arduino)
-
-```cpp
-#include <WiFi.h>
-#include <WiFiClientSecure.h>
-#include <HTTPClient.h>
-
-const char* API_URL = "https://SEU-APP.onrender.com/api/leituras";
-
-bool enviarLeitura(float nivel, float temp, float umid, int luz, int presenca, const char* tsIso) {
-  WiFiClientSecure client;
-  client.setInsecure();            // simplifica o TLS (não valida o certificado)
-  HTTPClient http;
-  http.begin(client, API_URL);
-  http.setTimeout(10000);
-  http.addHeader("Content-Type", "application/json");
-
-  char body[200];
-  snprintf(body, sizeof(body),
-    "{\"nivel_tinta\":%.1f,\"temperatura\":%.1f,\"umidade\":%.1f,\"luminosidade\":%d,\"presenca\":%d,\"timestamp\":\"%s\"}",
-    nivel, temp, umid, luz, presenca, tsIso);
-
-  int code = http.POST(body);
-  Serial.printf("POST /api/leituras -> %d\n", code);
-  http.end();
-  return code == 201;
-}
-```
-
-> Se o ESP32 usa Wi-Fi e ESP-NOW ao mesmo tempo, os dois precisam estar no **mesmo canal**: o canal do
-> roteador define o canal do ESP-NOW.
-> Se o `nan` do DHT gerar um JSON inválido, envie `null` nesses campos (ou use ArduinoJson, que já faz isso).
+> Se `http.begin(BACKEND_URL)` não conseguir abrir a conexão HTTPS, troque por um `WiFiClientSecure`
+> com `client.setInsecure()` e chame `http.begin(client, BACKEND_URL)`.
 
 ### Consultar os dados salvos
 
@@ -193,10 +162,10 @@ bool enviarLeitura(float nivel, float temp, float umid, int luz, int presenca, c
 | `GET /api/time` | Hora do servidor (para sincronizar o ESP sem NTP) |
 | `GET /health` | Health check |
 
-Direto no banco (terminal do container; no Render, aba **Shell**):
+Direto no banco (terminal do container: `docker compose exec pintura-iot bash`; no Render, aba **Shell**, só nos planos pagos):
 
 ```bash
-sqlite3 /data/pintura.db "SELECT datetime(ts,'unixepoch') AS hora, nivel_tinta, temperatura, umidade, luminosidade, presenca FROM leituras ORDER BY ts DESC LIMIT 10;"
+sqlite3 /data/pintura.db "SELECT datetime(ts,'unixepoch') AS hora, nivel_tinta, temperatura, umidade, luminosidade, uptime_emissor_ms FROM leituras ORDER BY ts DESC LIMIT 10;"
 ```
 
 ### CORS
@@ -241,10 +210,14 @@ CREATE TABLE leituras (
 - **Dashboard** "Processo de Pintura – Chão de Fábrica" (pasta *IoT*, também é a página inicial).
   Atualiza a cada **5 s**:
   - Indicadores atuais: medidor do nível do tanque (vermelho abaixo de 20%), estado do sistema
-    ("Operação normal" ou "ALERTA – verificar tanque"), temperatura, umidade, luminosidade e presença.
+    ("Operação normal" ou "ALERTA – verificar tanque"), temperatura, umidade, luminosidade e há quantos
+    segundos chegou a última leitura (verde até 10 s, vermelho a partir de 30 s).
   - Gráfico do nível do tanque, com a faixa crítica (< 20%) destacada.
   - Gráficos de temperatura e umidade e de luminosidade.
-  - Linha do tempo de presença na área de pintura.
-  - Tabela das últimas leituras e gráfico de leituras recebidas por minuto (mostra a saúde da comunicação).
-- O dashboard é provisionado a partir de `grafana/dashboards/pintura.json`. Para alterá-lo de forma
-  permanente, edite no Grafana, exporte o JSON (**Share → Export**) e substitua esse arquivo.
+  - Gráfico de leituras recebidas por minuto (~30 com envio a cada 2 s) e tabela das últimas leituras.
+- Presença não aparece no dashboard porque o PIR foi dispensado. A API ainda aceita o campo, caso ele
+  volte a ser usado.
+- Descrição detalhada dos painéis e consultas: [../docs/grafana.md](../docs/grafana.md).
+- O dashboard é provisionado a partir de `grafana/dashboards/pintura.json`, e o Grafana não deixa salvar
+  alterações pela interface. Para alterá-lo, edite no Grafana, copie o JSON em
+  **Dashboard settings → JSON Model** e substitua esse arquivo.
