@@ -387,8 +387,8 @@
     {
       "id": 6,
       "type": "stat",
-      "title": "Presença",
-      "description": "",
+      "title": "Última leitura há",
+      "description": "Segundos desde a última leitura recebida. Verde = ESP enviando (a cada 2 s).",
       "datasource": {
         "type": "frser-sqlite-datasource",
         "uid": "sqlite-pintura"
@@ -406,8 +406,8 @@
             "type": "frser-sqlite-datasource",
             "uid": "sqlite-pintura"
           },
-          "queryText": "SELECT ts AS time, presenca AS \"Presença\" FROM leituras ORDER BY ts DESC, id DESC LIMIT 1",
-          "rawQueryText": "SELECT ts AS time, presenca AS \"Presença\" FROM leituras ORDER BY ts DESC, id DESC LIMIT 1",
+          "queryText": "SELECT ts AS time, CAST(strftime('%s','now') AS INTEGER) - ts AS \"Atraso\"\nFROM leituras ORDER BY ts DESC, id DESC LIMIT 1",
+          "rawQueryText": "SELECT ts AS time, CAST(strftime('%s','now') AS INTEGER) - ts AS \"Atraso\"\nFROM leituras ORDER BY ts DESC, id DESC LIMIT 1",
           "queryType": "table",
           "timeColumns": [
             "time"
@@ -416,29 +416,22 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "Sem presença",
-                  "color": "text",
-                  "index": 0
-                },
-                "1": {
-                  "text": "Presença detectada",
-                  "color": "purple",
-                  "index": 1
-                }
-              }
-            }
-          ],
+          "unit": "s",
+          "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "text",
+                "color": "green",
                 "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 30
               }
             ]
           }
@@ -672,76 +665,6 @@
     },
     {
       "id": 10,
-      "type": "state-timeline",
-      "title": "Presença na área de pintura",
-      "description": "",
-      "datasource": {
-        "type": "frser-sqlite-datasource",
-        "uid": "sqlite-pintura"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 23,
-        "w": 12,
-        "h": 6
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "frser-sqlite-datasource",
-            "uid": "sqlite-pintura"
-          },
-          "queryText": "SELECT (ts / MAX(1, $__interval_ms / 1000)) * MAX(1, $__interval_ms / 1000) AS time, MAX(presenca) AS \"Presença\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nGROUP BY 1 ORDER BY 1",
-          "rawQueryText": "SELECT (ts / MAX(1, $__interval_ms / 1000)) * MAX(1, $__interval_ms / 1000) AS time, MAX(presenca) AS \"Presença\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nGROUP BY 1 ORDER BY 1",
-          "queryType": "time series",
-          "timeColumns": [
-            "time"
-          ]
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "Ausente",
-                  "color": "#6e7079",
-                  "index": 0
-                },
-                "1": {
-                  "text": "Detectada",
-                  "color": "purple",
-                  "index": 1
-                }
-              }
-            }
-          ],
-          "custom": {
-            "fillOpacity": 80,
-            "lineWidth": 0
-          },
-          "color": {
-            "mode": "fixed"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "showValue": "never",
-        "mergeValues": true,
-        "rowHeight": 0.8,
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        }
-      }
-    },
-    {
-      "id": 11,
       "type": "table",
       "title": "Últimas leituras",
       "description": "",
@@ -762,8 +685,8 @@
             "type": "frser-sqlite-datasource",
             "uid": "sqlite-pintura"
           },
-          "queryText": "SELECT ts AS time, nivel_tinta AS \"Nível %\", temperatura AS \"Temp °C\", umidade AS \"Umid %\",\n       luminosidade AS \"Luz\", presenca AS \"Presença\", alerta AS \"Alerta\", device_id AS \"Dispositivo\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nORDER BY ts DESC, id DESC LIMIT 200",
-          "rawQueryText": "SELECT ts AS time, nivel_tinta AS \"Nível %\", temperatura AS \"Temp °C\", umidade AS \"Umid %\",\n       luminosidade AS \"Luz\", presenca AS \"Presença\", alerta AS \"Alerta\", device_id AS \"Dispositivo\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nORDER BY ts DESC, id DESC LIMIT 200",
+          "queryText": "SELECT ts AS time, nivel_tinta AS \"Nível %\", temperatura AS \"Temp °C\", umidade AS \"Umid %\",\n       luminosidade AS \"Luz\", alerta AS \"Alerta\", device_id AS \"Dispositivo\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nORDER BY ts DESC, id DESC LIMIT 200",
+          "rawQueryText": "SELECT ts AS time, nivel_tinta AS \"Nível %\", temperatura AS \"Temp °C\", umidade AS \"Umid %\",\n       luminosidade AS \"Luz\", alerta AS \"Alerta\", device_id AS \"Dispositivo\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nORDER BY ts DESC, id DESC LIMIT 200",
           "queryType": "table",
           "timeColumns": [
             "time"
@@ -784,7 +707,7 @@
       }
     },
     {
-      "id": 12,
+      "id": 11,
       "type": "timeseries",
       "title": "Leituras recebidas por minuto",
       "description": "Saúde da comunicação: com envio a cada 2 s o esperado é ~30/min.",
@@ -794,9 +717,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 29,
+        "y": 23,
         "w": 12,
-        "h": 6
+        "h": 12
       },
       "targets": [
         {
@@ -826,7 +749,8 @@
           },
           "color": {
             "mode": "palette-classic"
-          }
+          },
+          "min": 0
         },
         "overrides": []
       },

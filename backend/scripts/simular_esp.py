@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Simula o ESP32 de monitoramento enviando leituras para a API.
 
+Envia o mesmo JSON que firmware/monitoramento/monitoramento.ino monta.
+
 Usa só a biblioteca padrão (não precisa instalar nada).
 
 Exemplos:
-    python scripts/simular_esp.py --url http://localhost:8080 --api-key minha-chave
-    python scripts/simular_esp.py --url https://SEU-APP.onrender.com --api-key ... --lote 5
+    python scripts/simular_esp.py --url http://localhost:8080
+    python scripts/simular_esp.py --url https://SEU-APP.onrender.com --lote 5
     python scripts/simular_esp.py --url http://localhost:8080 --historico 3600   # 1 h de dados passados
 """
 import argparse
@@ -21,23 +23,20 @@ from datetime import datetime, timezone
 class Tanque:
     def __init__(self):
         self.nivel = 90.0
-        self.presenca = 0
+        self.inicio = time.time()
 
     def ler(self, t: float) -> dict:
         # Consome tinta aos poucos e "reabastece" quando chega a 8%
         self.nivel -= random.uniform(0.05, 0.4)
         if self.nivel < 8:
             self.nivel = 95.0
-        if random.random() < 0.08:
-            self.presenca = 1 - self.presenca
         return {
-            "nivel_tinta": round(self.nivel, 1),
+            "nivel_tinta": int(self.nivel),
             "temperatura": round(24 + 2 * math.sin(t / 600) + random.uniform(-0.3, 0.3), 1),
             "umidade": round(55 + 8 * math.sin(t / 900 + 1) + random.uniform(-1, 1), 1),
             "luminosidade": int(max(0, min(4095, 680 + 300 * math.sin(t / 300) + random.uniform(-40, 40)))),
-            "presenca": self.presenca,
             "timestamp": datetime.fromtimestamp(t, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "device_id": "simulador",
+            "uptime_emissor_ms": int((t - self.inicio) * 1000) % 2**32,
         }
 
 
@@ -45,7 +44,7 @@ def enviar(url: str, api_key: str, payload) -> str:
     req = urllib.request.Request(
         url.rstrip("/") + "/api/leituras",
         data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json", "X-API-Key": api_key},
+        headers={"Content-Type": "application/json", **({"X-API-Key": api_key} if api_key else {})},
         method="POST",
     )
     try:
@@ -58,7 +57,7 @@ def enviar(url: str, api_key: str, payload) -> str:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--url", default="http://localhost:8080")
-    ap.add_argument("--api-key", default="")
+    ap.add_argument("--api-key", default="", help="só se a API_KEY estiver definida no servidor")
     ap.add_argument("--intervalo", type=float, default=2.0, help="segundos entre leituras")
     ap.add_argument("--lote", type=int, default=1, help="leituras por requisição")
     ap.add_argument("--historico", type=int, default=0, help="gera N segundos de dados passados e sai")
