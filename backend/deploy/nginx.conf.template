@@ -1,0 +1,54 @@
+# Proxy reverso: uma única porta pública (exigência do Render)
+#   /grafana/*  -> Grafana (127.0.0.1:3000)
+#   resto       -> API FastAPI (127.0.0.1:8000)
+worker_processes 1;
+pid /tmp/nginx.pid;
+error_log /dev/stderr warn;
+
+events { worker_connections 512; }
+
+http {
+    access_log off;
+    client_max_body_size 2m;
+    sendfile on;
+    keepalive_timeout 75s;
+
+    map $http_upgrade $connection_upgrade {
+        default upgrade;
+        ''      close;
+    }
+
+    # Render termina o TLS e envia X-Forwarded-Proto=https; localmente usa o esquema real
+    map $http_x_forwarded_proto $fwd_proto {
+        default $http_x_forwarded_proto;
+        ''      $scheme;
+    }
+
+    server {
+        listen ${PORT};
+        listen [::]:${PORT};
+
+        location /grafana/ {
+            proxy_pass http://127.0.0.1:3000;
+            proxy_http_version 1.1;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $fwd_proto;
+            # WebSocket (Grafana Live)
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+        }
+
+        location = /grafana {
+            return 302 /grafana/;
+        }
+
+        location / {
+            proxy_pass http://127.0.0.1:8000;
+            proxy_http_version 1.1;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $fwd_proto;
+        }
+    }
+}

@@ -1,0 +1,15 @@
+apiVersion: 1
+
+# Fonte de dados SQLite (plugin frser-sqlite-datasource), apontando para o
+# mesmo arquivo em que a API grava. O caminho vem da variável DATABASE_PATH.
+datasources:
+  - name: SQLite Pintura
+    uid: sqlite-pintura
+    type: frser-sqlite-datasource
+    access: proxy
+    isDefault: true
+    editable: false
+    jsonData:
+      path: ${DATABASE_PATH}
+      # espera até 10 s se o arquivo estiver ocupado (painéis consultam em paralelo)
+      pathOptions: _pragma=busy_timeout(10000)
