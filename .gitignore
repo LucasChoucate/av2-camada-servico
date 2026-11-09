@@ -1,0 +1,19 @@
+# Segredos (nunca versionar)
+secrets.h
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Arduino / PlatformIO
+build/
+.pio/
+
+# Sistema
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
