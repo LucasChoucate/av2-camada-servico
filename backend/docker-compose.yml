@@ -1,0 +1,20 @@
+# Execução local idêntica à do Render:  docker compose up --build
+# API:     http://localhost:8080/docs
+# Grafana: http://localhost:8080/grafana/
+services:
+  pintura-iot:
+    build: .
+    ports:
+      - "8080:10000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: "10000"
+      DATABASE_PATH: /data/pintura.db
+    volumes:
+      - dados:/data
+    restart: unless-stopped
+
+volumes:
+  dados:

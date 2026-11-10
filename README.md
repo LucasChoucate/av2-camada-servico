@@ -1,8 +1,8 @@
-# Monitoramento do Processo de Pintura com ESP32, ESP-NOW, InfluxDB e Grafana
+# Monitoramento do Processo de Pintura com ESP32, ESP-NOW, SQLite e Grafana
 
 Projeto da AV2 da disciplina **Práticas Integradas: Camada de Serviço**.
 
-Sistema IoT que acompanha o processo de pintura de blocos de madeira em um chão de fábrica simulado. Um ESP32 lê os sensores do tanque de tinta e envia as leituras por ESP-NOW para um segundo ESP32, que mostra os valores numa matriz de LEDs e encaminha tudo para um backend em Python. O backend grava no InfluxDB e o Grafana exibe os dashboards em tempo real.
+Sistema IoT que acompanha o processo de pintura de blocos de madeira em um chão de fábrica simulado. Um ESP32 lê os sensores do tanque de tinta e envia as leituras por ESP-NOW para um segundo ESP32, que mostra os valores numa matriz de LEDs e encaminha tudo para um backend em Python. O backend grava no SQLite e o Grafana exibe os dashboards em tempo real. Backend, banco e Grafana rodam juntos em um container Docker, hospedado no Render.
 
 ## Integrantes
 
@@ -19,9 +19,11 @@ flowchart LR
     S[Sensores<br/>HC-SR04, DHT22, LDR] --> A[ESP32-S3<br/>chão de fábrica]
     A -- ESP-NOW a cada 2 s --> B[ESP32-S3<br/>monitoramento]
     B --> M[Matriz de LEDs 8x8]
-    B -- HTTP POST JSON --> API[Backend Python]
-    API --> DB[(InfluxDB)]
-    DB --> G[Grafana]
+    subgraph Render [Container Docker no Render]
+        API[Backend Python<br/>FastAPI] --> DB[(SQLite)]
+        DB --> G[Grafana]
+    end
+    B -- HTTPS POST JSON --> API
 ```
 
 ## Estrutura do repositório
@@ -31,12 +33,16 @@ flowchart LR
 ├── firmware/
 │   ├── chao-de-fabrica/      # ESP32 que lê os sensores e envia por ESP-NOW
 │   ├── monitoramento/        # ESP32 que recebe, exibe na matriz e envia ao backend
-│   └── utilitarios/ler-mac/  # Sketch auxiliar para descobrir o MAC de cada placa
-├── backend/                  # API em Python que grava no InfluxDB
+│   └── utilitarios/
+│       ├── ler-mac/          # Sketch auxiliar para descobrir o MAC de cada placa
+│       ├── teste-backend/    # Um ESP32-S3 sem sensores: todos os dados simulados, envia direto para a API
+├── backend/                  # API FastAPI + SQLite + Grafana (Docker)
 ├── docs/
 │   ├── circuito.md           # Ligações de cada componente
-│   ├── banco-de-dados.md     # Descrição do InfluxDB
-│   └── grafana.md            # Descrição dos dashboards
+│   ├── banco-de-dados.md     # Descrição do banco SQLite
+│   ├── grafana.md            # Descrição dos dashboards
+│   └── img/grafana.png       # Print do dashboard
+├── render.yaml               # Deploy do backend no Render (Blueprint)
 └── README.md
 ```
 
@@ -52,7 +58,7 @@ flowchart LR
 | LED verde | 1 |
 | LED vermelho | 1 |
 | Resistores, protoboard e jumpers | diversos |
-| Computador com Arduino IDE, Python, InfluxDB e Grafana | 1 |
+| Computador com Arduino IDE (o backend e o Grafana rodam no Render ou no Docker) | 1 |
 
 ## Como montar o projeto
 
@@ -85,7 +91,7 @@ Em cada pasta de firmware, copie `secrets.example.h` para `secrets.h` e preencha
 | Arquivo | Campo | O que colocar |
 |---|---|---|
 | `monitoramento/secrets.h` | `WIFI_SSID`, `WIFI_PASSWORD` | Rede Wi-Fi 2.4 GHz |
-| `monitoramento/secrets.h` | `BACKEND_URL` | `http://IP_DO_COMPUTADOR:PORTA/api/leituras` |
+| `monitoramento/secrets.h` | `BACKEND_URL` | `https://SEU-APP.onrender.com/api/leituras` (Render) ou `http://IP_DO_COMPUTADOR:8080/api/leituras` (Docker local) |
 | `monitoramento/secrets.h` | `MAC_CHAO_FABRICA` | MAC do ESP32 chão de fábrica |
 | `chao-de-fabrica/secrets.h` | `MAC_MONITORAMENTO` | MAC do ESP32 de monitoramento |
 | `chao-de-fabrica/secrets.h` | `WIFI_CHANNEL` | Canal do roteador (ver passo 4) |
@@ -115,20 +121,58 @@ Formato enviado ao backend:
 }
 ```
 
-O `timestamp` vem como `null` enquanto o NTP não sincroniza; nesse caso o backend usa a própria hora.
+O `timestamp` vem como `null` enquanto o NTP não sincroniza; nesse caso o backend usa a própria hora. Se o DHT22 falhar, o firmware escreve `nan` em `temperatura`/`umidade`; o backend grava esses campos como `null`.
 
 ## Como rodar o backend
 
-[PREENCHER (backend): pré-requisitos, como criar o ambiente virtual, instalar dependências, configurar o `.env` e o comando para iniciar a API. Detalhes em [backend/README.md](backend/README.md).]
+O backend fica em [backend/](backend/): uma API em FastAPI que grava no SQLite e um Grafana já configurado, rodando juntos em um único container Docker. Detalhes em [backend/README.md](backend/README.md).
+
+**No Render (produção).** O [render.yaml](render.yaml) da raiz cria o serviço:
+
+1. No Render, **New + → Blueprint**, escolha este repositório e a branch.
+2. Clique em **Apply** e espere o status **Live**.
+3. Use `https://SEU-APP.onrender.com/api/leituras` como `BACKEND_URL` do monitoramento.
+
+Nenhuma variável de ambiente precisa ser preenchida: o Render gera a senha do admin do Grafana (`GF_SECURITY_ADMIN_PASSWORD`) e as demais já têm valor padrão. No plano gratuito, o banco é apagado a cada deploy ou reinício do serviço.
+
+**Localmente (Docker).** Com o Docker instalado:
+
+```bash
+cd backend
+docker compose up --build
+```
+
+API em `http://localhost:8080/docs` e Grafana em `http://localhost:8080/grafana/`. Para o ESP32 alcançar o computador, use o IP dele na rede (ex.: `http://192.168.0.10:8080/api/leituras`).
+
+Sem o hardware, dá para testar com o simulador: `python backend/scripts/simular_esp.py --url http://localhost:8080`.
+
+> O monitoramento espera no máximo 1,5 s pela resposta (`HTTP_TIMEOUT_MS`). No Render, a conexão HTTPS pode demorar mais que isso. Se o Serial mostrar `Backend: falha de conexão (read Timeout)`, aumente esse valor para 5000.
 
 ## Banco de dados e Grafana
 
 - Descrição do banco: [docs/banco-de-dados.md](docs/banco-de-dados.md)
 - Descrição dos dashboards: [docs/grafana.md](docs/grafana.md)
 
+![Dashboard no Grafana](docs/img/grafana.png)
+
 ## Como consultar os dados salvos
 
-[PREENCHER (backend): como ver os dados no InfluxDB (interface web, query de exemplo) e, se existir, a rota da API que retorna as últimas leituras.]
+- **Grafana:** `https://SEU-APP.onrender.com/grafana/`, com o dashboard "Processo de Pintura – Chão de Fábrica" e a tabela das últimas leituras. Não precisa de login.
+- **API (navegador ou `curl`):**
+
+| Rota | O que retorna |
+|---|---|
+| `GET /api/leituras?limit=50` | Últimas leituras em JSON (filtros `inicio` e `fim` em ISO 8601) |
+| `GET /api/leituras/ultima` | Leitura mais recente |
+| `GET /api/leituras.csv` | Leituras em CSV, abre no Excel (até 10.000 por padrão; ajuste com `limit`) |
+| `GET /api/resumo?horas=24` | Nível mínimo, máximo e médio, médias de temperatura, umidade e luz, total de alertas |
+| `GET /docs` | Documentação interativa (Swagger) |
+
+- **SQL direto no banco** (local com `docker compose exec pintura-iot bash`; no Render, pela aba **Shell**, disponível só nos planos pagos):
+
+```bash
+sqlite3 /data/pintura.db "SELECT datetime(ts,'unixepoch') AS hora, nivel_tinta, temperatura, umidade, luminosidade FROM leituras ORDER BY ts DESC LIMIT 10;"
+```
 
 ## Dificuldades e soluções
 

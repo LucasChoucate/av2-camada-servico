@@ -1,0 +1,28 @@
+# Blueprint do Render: New + > Blueprint > selecione este repositório.
+# O backend fica em backend/; os caminhos abaixo são relativos à raiz do repositório.
+services:
+  - type: web
+    name: pintura-iot
+    runtime: docker
+    plan: free                 # para dados persistentes use "starter" + o bloco "disk" abaixo
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: GF_SECURITY_ADMIN_PASSWORD
+        generateValue: true
+      - key: DATABASE_PATH
+        value: /data/pintura.db
+      - key: RETENTION_DAYS
+        value: "30"
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: NIVEL_ALERTA
+        value: "20"
+    # Disco persistente (somente planos pagos). Sem ele, o SQLite é apagado
+    # a cada novo deploy/reinício do serviço.
+    # disk:
+    #   name: dados
+    #   mountPath: /data
+    #   sizeGB: 1

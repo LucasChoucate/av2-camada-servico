@@ -1,0 +1,777 @@
+{
+  "uid": "pintura-iot",
+  "title": "Processo de Pintura – Chão de Fábrica",
+  "tags": [
+    "iot",
+    "esp32",
+    "pintura"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "refresh": "5s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m"
+    ]
+  },
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "gauge",
+      "title": "Nível do tanque",
+      "description": "Última leitura do sensor ultrassônico. Abaixo de 20% = alerta.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "sqlite-pintura"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 5,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "sqlite-pintura"
+          },
+          "queryText": "SELECT ts AS time, nivel_tinta AS \"Nível\" FROM leituras ORDER BY ts DESC, id DESC LIMIT 1",
+          "rawQueryText": "SELECT ts AS time, nivel_tinta AS \"Nível\" FROM leituras ORDER BY ts DESC, id DESC LIMIT 1",
+          "queryType": "table",
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 20
+              },
+              {
+                "color": "green",
+                "value": 40
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdMarkers": true,
+        "showThresholdLabels": false
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Estado do sistema",
+      "description": "Alerta quando nível de tinta < 20%.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "sqlite-pintura"
+      },
+      "gridPos": {
+        "x": 5,
+        "y": 0,
+        "w": 5,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "sqlite-pintura"
+          },
+          "queryText": "SELECT ts AS time, alerta AS \"Estado\" FROM leituras ORDER BY ts DESC, id DESC LIMIT 1",
+          "rawQueryText": "SELECT ts AS time, alerta AS \"Estado\" FROM leituras ORDER BY ts DESC, id DESC LIMIT 1",
+          "queryType": "table",
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Operação normal",
+                  "color": "green",
+                  "index": 0
+                },
+                "1": {
+                  "text": "ALERTA – verificar tanque",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Temperatura",
+      "description": "",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "sqlite-pintura"
+      },
+      "gridPos": {
+        "x": 10,
+        "y": 0,
+        "w": 4,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "sqlite-pintura"
+          },
+          "queryText": "SELECT ts AS time, temperatura AS \"Temperatura\" FROM leituras ORDER BY ts DESC, id DESC LIMIT 1",
+          "rawQueryText": "SELECT ts AS time, temperatura AS \"Temperatura\" FROM leituras ORDER BY ts DESC, id DESC LIMIT 1",
+          "queryType": "table",
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 15
+              },
+              {
+                "color": "orange",
+                "value": 30
+              },
+              {
+                "color": "red",
+                "value": 35
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Umidade",
+      "description": "",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "sqlite-pintura"
+      },
+      "gridPos": {
+        "x": 14,
+        "y": 0,
+        "w": 3,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "sqlite-pintura"
+          },
+          "queryText": "SELECT ts AS time, umidade AS \"Umidade\" FROM leituras ORDER BY ts DESC, id DESC LIMIT 1",
+          "rawQueryText": "SELECT ts AS time, umidade AS \"Umidade\" FROM leituras ORDER BY ts DESC, id DESC LIMIT 1",
+          "queryType": "table",
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "humidity",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 40
+              },
+              {
+                "color": "orange",
+                "value": 70
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Luminosidade",
+      "description": "",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "sqlite-pintura"
+      },
+      "gridPos": {
+        "x": 17,
+        "y": 0,
+        "w": 3,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "sqlite-pintura"
+          },
+          "queryText": "SELECT ts AS time, luminosidade AS \"Luminosidade\" FROM leituras ORDER BY ts DESC, id DESC LIMIT 1",
+          "rawQueryText": "SELECT ts AS time, luminosidade AS \"Luminosidade\" FROM leituras ORDER BY ts DESC, id DESC LIMIT 1",
+          "queryType": "table",
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "dark-blue",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1500
+              },
+              {
+                "color": "orange",
+                "value": 3000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Última leitura há",
+      "description": "Segundos desde a última leitura recebida. Verde = ESP enviando (a cada 2 s).",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "sqlite-pintura"
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 0,
+        "w": 4,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "sqlite-pintura"
+          },
+          "queryText": "SELECT ts AS time, CAST(strftime('%s','now') AS INTEGER) - ts AS \"Atraso\"\nFROM leituras ORDER BY ts DESC, id DESC LIMIT 1",
+          "rawQueryText": "SELECT ts AS time, CAST(strftime('%s','now') AS INTEGER) - ts AS \"Atraso\"\nFROM leituras ORDER BY ts DESC, id DESC LIMIT 1",
+          "queryType": "table",
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 30
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Nível do tanque de tinta (%)",
+      "description": "Faixa vermelha = nível crítico (< 20%).",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "sqlite-pintura"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "sqlite-pintura"
+          },
+          "queryText": "SELECT (ts / MAX(1, $__interval_ms / 1000)) * MAX(1, $__interval_ms / 1000) AS time, AVG(nivel_tinta) AS \"Nível (%)\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nGROUP BY 1 ORDER BY 1",
+          "rawQueryText": "SELECT (ts / MAX(1, $__interval_ms / 1000)) * MAX(1, $__interval_ms / 1000) AS time, AVG(nivel_tinta) AS \"Nível (%)\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nGROUP BY 1 ORDER BY 1",
+          "queryType": "time series",
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "spanNulls": 30000,
+            "showPoints": "never",
+            "gradientMode": "opacity",
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "transparent",
+                "value": 20
+              }
+            ]
+          },
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "interval": "2s"
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Temperatura e umidade",
+      "description": "",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "sqlite-pintura"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "sqlite-pintura"
+          },
+          "queryText": "SELECT (ts / MAX(1, $__interval_ms / 1000)) * MAX(1, $__interval_ms / 1000) AS time, AVG(temperatura) AS \"Temperatura (°C)\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nGROUP BY 1 ORDER BY 1",
+          "rawQueryText": "SELECT (ts / MAX(1, $__interval_ms / 1000)) * MAX(1, $__interval_ms / 1000) AS time, AVG(temperatura) AS \"Temperatura (°C)\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nGROUP BY 1 ORDER BY 1",
+          "queryType": "time series",
+          "timeColumns": [
+            "time"
+          ]
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "sqlite-pintura"
+          },
+          "queryText": "SELECT (ts / MAX(1, $__interval_ms / 1000)) * MAX(1, $__interval_ms / 1000) AS time, AVG(umidade) AS \"Umidade (%)\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nGROUP BY 1 ORDER BY 1",
+          "rawQueryText": "SELECT (ts / MAX(1, $__interval_ms / 1000)) * MAX(1, $__interval_ms / 1000) AS time, AVG(umidade) AS \"Umidade (%)\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nGROUP BY 1 ORDER BY 1",
+          "queryType": "time series",
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "spanNulls": 30000,
+            "showPoints": "never",
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "interval": "2s"
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Luminosidade (ADC 0–4095)",
+      "description": "",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "sqlite-pintura"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 15,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "sqlite-pintura"
+          },
+          "queryText": "SELECT (ts / MAX(1, $__interval_ms / 1000)) * MAX(1, $__interval_ms / 1000) AS time, AVG(luminosidade) AS \"Luminosidade\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nGROUP BY 1 ORDER BY 1",
+          "rawQueryText": "SELECT (ts / MAX(1, $__interval_ms / 1000)) * MAX(1, $__interval_ms / 1000) AS time, AVG(luminosidade) AS \"Luminosidade\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nGROUP BY 1 ORDER BY 1",
+          "queryType": "time series",
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "spanNulls": 30000,
+            "showPoints": "never",
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0,
+          "max": 4095
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "interval": "2s"
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Últimas leituras",
+      "description": "",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "sqlite-pintura"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 23,
+        "w": 12,
+        "h": 12
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "sqlite-pintura"
+          },
+          "queryText": "SELECT ts AS time, nivel_tinta AS \"Nível %\", temperatura AS \"Temp °C\", umidade AS \"Umid %\",\n       luminosidade AS \"Luz\", alerta AS \"Alerta\", device_id AS \"Dispositivo\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nORDER BY ts DESC, id DESC LIMIT 200",
+          "rawQueryText": "SELECT ts AS time, nivel_tinta AS \"Nível %\", temperatura AS \"Temp °C\", umidade AS \"Umid %\",\n       luminosidade AS \"Luz\", alerta AS \"Alerta\", device_id AS \"Dispositivo\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nORDER BY ts DESC, id DESC LIMIT 200",
+          "queryType": "table",
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Leituras recebidas por minuto",
+      "description": "Saúde da comunicação: com envio a cada 2 s o esperado é ~30/min.",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "sqlite-pintura"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 23,
+        "w": 12,
+        "h": 12
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "frser-sqlite-datasource",
+            "uid": "sqlite-pintura"
+          },
+          "queryText": "SELECT $__unixEpochGroupSeconds(ts, 60) AS time, COUNT(*) AS \"Leituras/min\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nGROUP BY 1 ORDER BY 1",
+          "rawQueryText": "SELECT $__unixEpochGroupSeconds(ts, 60) AS time, COUNT(*) AS \"Leituras/min\"\nFROM leituras WHERE ts >= $__from / 1000 AND ts < $__to / 1000\nGROUP BY 1 ORDER BY 1",
+          "queryType": "time series",
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 60,
+            "spanNulls": 30000,
+            "showPoints": "never",
+            "gradientMode": "opacity",
+            "drawStyle": "bars"
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "interval": "2s"
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  }
+}
