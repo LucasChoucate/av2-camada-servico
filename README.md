@@ -33,7 +33,9 @@ flowchart LR
 ├── firmware/
 │   ├── chao-de-fabrica/      # ESP32 que lê os sensores e envia por ESP-NOW
 │   ├── monitoramento/        # ESP32 que recebe, exibe na matriz e envia ao backend
-│   └── utilitarios/ler-mac/  # Sketch auxiliar para descobrir o MAC de cada placa
+│   └── utilitarios/
+│       ├── ler-mac/          # Sketch auxiliar para descobrir o MAC de cada placa
+│       ├── teste-backend/    # Um ESP32-S3 sem sensores: todos os dados simulados, envia direto para a API
 ├── backend/                  # API FastAPI + SQLite + Grafana (Docker)
 ├── docs/
 │   ├── circuito.md           # Ligações de cada componente
